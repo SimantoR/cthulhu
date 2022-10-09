@@ -1,0 +1,19 @@
+﻿---
+BasedOnStyle: WebKit
+AlignConsecutiveAssignments: 'true'
+AlignConsecutiveDeclarations: 'true'
+AlignEscapedNewlines: Right
+AlignOperands: 'true'
+AlignTrailingComments: 'true'
+AllowShortFunctionsOnASingleLine: None
+BreakBeforeBraces: Allman
+ColumnLimit: '110'
+NamespaceIndentation: All
+PointerAlignment: Left
+SortIncludes: 'false'
+SpaceBeforeCpp11BracedList: 'true'
+SpaceBeforeParens: ControlStatements
+IndentPPDirectives: AfterHash
+SpacesInParentheses: 'true'
+
+...
