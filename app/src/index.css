@@ -1,0 +1,23 @@
+@tailwind base;
+
+@layer base {
+  input:focus-visible {
+    @apply outline-blue-500;
+  }
+
+  input {
+    @apply border-gray-300;
+  }
+}
+
+.arrow:before {
+  content: " ";
+  height: 0;
+  position: absolute;
+  width: 0;
+  border: 10px solid transparent;
+  border-right-color: #da362a;
+}
+
+@tailwind components;
+@tailwind utilities;
