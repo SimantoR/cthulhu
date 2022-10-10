@@ -36,9 +36,6 @@ set_target_properties(aakara PROPERTIES LINK_FLAGS ${EMCC_FLAGS})
 target_compile_options(aakara PUBLIC -fexceptions)
 
 target_include_directories(aakara PUBLIC "${PROJECT_SOURCE_DIR}/vendors/glm-0.9.9.8")
-target_include_directories(aakara PUBLIC "${PROJECT_SOURCE_DIR}/vendors/assimp-5.0.1/include")
-target_include_directories(aakara PUBLIC "${PROJECT_SOURCE_DIR}/vendors/entt-3.9.0/src")
-target_include_directories(aakara PUBLIC "${PROJECT_SOURCE_DIR}/vendors/OpenXLSX/OpenXLSX/headers")
 target_include_directories(aakara PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
 if (${EMSCRIPTEN})
