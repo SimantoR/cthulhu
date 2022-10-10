@@ -1,9 +1,0 @@
-[submodule "vendors/assimp-5.1.4"]
-	path = vendors/assimp-5.1.4
-	url = https://github.com/assimp/assimp.git
-[submodule "vendors/glm-0.9.9.8"]
-	path = vendors/glm-0.9.9.8
-	url = https://github.com/g-truc/glm.git
-[submodule "vendors/entt-3.9.0"]
-	path = vendors.entt-3.9.0
-	url = https://github.com/skypjack/entt.git
