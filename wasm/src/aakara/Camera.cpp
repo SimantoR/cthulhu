@@ -63,11 +63,17 @@ void setViewport( Ptr<Camera> cam, glm::vec2 viewport )
     cam->Viewport = viewport;
 }
 
+Ptr<Transform> getTransform( Ptr<Camera> cam )
+{
+    return cam->transform;
+}
+
 EMSCRIPTEN_BINDINGS( CAMERA_HPP )
 {
     emscripten::class_<Camera>( "Camera" ) //
         .smart_ptr_constructor( "Camera", &std::make_shared<Camera> )
-        .property( "transform", &Camera::transform )
+        // .property( "transform", &Camera::transform )
+        .function( "getTransform", &getTransform )
         .function( "getViewport", &getViewport )
         .function( "setViewport", &setViewport );
 }

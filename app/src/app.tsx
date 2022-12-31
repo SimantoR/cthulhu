@@ -35,6 +35,7 @@ function lerpFloat(start: number, end: number, step: number) {
 const Router: React.FC = function () {
   const canvasRef = React.useRef<HTMLCanvasElement>();
 
+  //#region States
   /* --------------------------------- States --------------------------------- */
   const [app, set_app] = React.useState<Aakara.App>(null);
   const [camera, set_camera] = React.useState<Aakara.Camera>();
@@ -44,7 +45,7 @@ const Router: React.FC = function () {
   const [parts, set_parts] = React.useState<Part[]>([]);
   const [mouseState, set_mouseState] = React.useState({
     is_pressed: false,
-    delta: null as Vec2 | null,
+    delta: undefined as Vec2 | undefined,
   });
   const [, updateState] = React.useState<any>();
   const [keyMap, set_keyMap] = React.useState<any>({});
@@ -53,21 +54,36 @@ const Router: React.FC = function () {
     keyboard: 1,
   });
   const forceUpdate = React.useCallback(() => updateState({}), []);
+  //#endregion
 
+  //#region Memo
   /* ---------------------------------- Memo ---------------------------------- */
   const cam_pos = React.useMemo((): Vec3 => {
     if (!camera) return { x: 0, y: 0, z: 0 };
 
-    return camera.transform.position;
+    const cam_transform = camera.getTransform();
+    const pos = cam_transform.position;
+    cam_transform.delete();
+
+    return pos;
   }, [camera]);
 
   const isSpinnerVisible = React.useMemo(() => {
     return parts.length === 0;
   }, [parts]);
+  //#endregion
 
+  //#region Effects
   /* --------------------------------- Effects -------------------------------- */
   React.useEffect(() => {
-    if (!app) loadaakara().then(onStartup);
+    if (!app) loadaakara().then(bootstrap);
+
+    // wasm memory cleanup on unmount
+    return () => {
+      app && !app.isDeleted() && app.delete();
+      camera && !camera.isDeleted() && camera.delete();
+      orbitControl && !orbitControl.isDeleted() && orbitControl.delete();
+    };
   }, []);
 
   React.useEffect(() => {
@@ -80,34 +96,34 @@ const Router: React.FC = function () {
       orbitControl.orbit(0, 0);
     }
   }, [focusPoint, orbitControl]);
+  //#endregion
 
-  const onStartup = (aakara: typeof Aakara) => {
+  const bootstrap = (aakara: typeof Aakara) => {
     if (!canvasRef.current) {
-      console.error("No canvas found!");
+      console.error("Bootstrap:: No canvas found!");
       return;
     }
 
-    const ref = canvasRef.current;
+    const canvas = canvasRef.current;
 
     // let _app = wasm.init(`#${ref.id}`, ref.width, ref.height);
 
-    let _app = new aakara.App(`#${ref.id}`, ref.width, ref.height);
-    const _camera = _app.getCamera();
-    const _light = _app.getLight();
-    set_app(_app);
-    set_camera(_camera);
+    let app_inst = new aakara.App(`#${canvas.id}`, canvas.width, canvas.height);
+    console.log(app_inst);
+    const camera_inst = app_inst.getCamera();
+    const light_inst = app_inst.getLight();
+    const renderer_inst = app_inst.getRenderer();
 
-    set_orbitControl(new aakara.OrbitCameraControl(_camera, { x: 0, y: 0, z: 0 }, 10.0));
+    light_inst.setDirection({ x: 1.0, y: 0.0, z: 0.0 });
+    renderer_inst.setColor(1.0, 1.0, 1.0);
+    light_inst.setRotation(lightRot);
 
-    let part_transform = new aakara.Transform(
-      { x: 0.0, y: -1.0, z: 10.0 },
-      { x: 0.0, y: 0.0, z: 0.0 },
-      { x: 0.5, y: 0.5, z: 0.5 }
-    );
+    set_app(app_inst);
+    set_camera(camera_inst);
+    light_inst.delete();
+    renderer_inst.delete();
 
-    _app.getLight().setDirection({ x: 1.0, y: 0.0, z: 0.0 });
-
-    _app.getRenderer().setColor(1.0, 1.0, 1.0);
+    set_orbitControl(new aakara.OrbitCameraControl(camera_inst, { x: 0, y: 0, z: 0 }, 10.0));
 
     const part_callback = function (part: Aakara.Part) {
       const id = part.getId();
@@ -131,10 +147,16 @@ const Router: React.FC = function () {
     };
 
     console.time("Part");
-    _app.loadPart("crate.obj", "crate_diffuse.png", part_transform, part_callback);
+    let part_transform = new aakara.Transform(
+      { x: 0.0, y: -1.0, z: 10.0 },
+      { x: 0.0, y: 0.0, z: 0.0 },
+      { x: 0.5, y: 0.5, z: 0.5 }
+    );
+    app_inst.loadPart("crate.obj", "crate_diffuse.png", part_transform, part_callback);
+    part_transform.delete();
 
-    ref.addEventListener("click", function (ev: MouseEvent) {
-      let rect = ref.getBoundingClientRect();
+    canvas.addEventListener("click", function (ev: MouseEvent) {
+      let rect = canvas.getBoundingClientRect();
       let coords = {
         x: ev.clientX - rect.left,
         y: ev.clientY - rect.top,
@@ -148,8 +170,6 @@ const Router: React.FC = function () {
     //     _app.renderer.setViewportSize(ref.width, ref.height);
     //   }
     // });
-
-    _light.setRotation(lightRot);
 
     console.log("Init complete!");
   };
@@ -195,7 +215,9 @@ const Router: React.FC = function () {
       const mouseX = ev.movementX * factor;
       const mouseY = ev.movementY * factor;
 
-      let _rotation = camera.transform.rotation;
+      const cam_transform = camera.getTransform();
+
+      let _rotation = cam_transform.rotation;
       _rotation.x += mouseY / 2;
       _rotation.y += -mouseX / 2;
       _rotation.z = 0;
@@ -243,7 +265,9 @@ const Router: React.FC = function () {
       if ("a" in keyMap) translation.x += factor;
       else if ("d" in keyMap) translation.x -= factor;
 
-      camera.transform.translate(translation);
+      const camT = camera.getTransform();
+      camT.translate(translation);
+      camT.delete();
 
       const count = app.draw();
       if (count > 0) {
@@ -425,9 +449,9 @@ const Router: React.FC = function () {
                   value={cam_pos.x}
                   onChange={(evt) => {
                     cam_pos.x = Number.parseFloat(evt.target.value);
-                    const transform = camera.transform;
-                    transform.position = cam_pos;
-                    camera.transform = transform;
+                    const camT = camera.getTransform();
+                    camT.position = cam_pos;
+                    camT.delete();
                     set_camera(camera);
                   }}
                   className="w-full p-2 border shadow-inner focus:shadow-lg"
@@ -442,9 +466,9 @@ const Router: React.FC = function () {
                   value={cam_pos.y}
                   onChange={(evt) => {
                     cam_pos.y = Number.parseFloat(evt.target.value);
-                    const transform = camera.transform;
-                    transform.position = cam_pos;
-                    camera.transform = transform;
+                    const camT = camera.getTransform();
+                    camT.position = cam_pos;
+                    camT.delete();
                     set_camera(camera);
                   }}
                   className="w-full p-2 border shadow-inner focus:shadow-lg"
@@ -459,9 +483,9 @@ const Router: React.FC = function () {
                   value={cam_pos.z}
                   onChange={(evt) => {
                     cam_pos.z = Number.parseFloat(evt.target.value);
-                    const transform = camera.transform;
-                    transform.position = cam_pos;
-                    camera.transform = transform;
+                    const camT = camera.getTransform();
+                    camT.position = cam_pos;
+                    camT.delete();
                     set_camera(camera);
                   }}
                   className="w-full p-2 border shadow-inner focus:shadow-lg"
@@ -482,7 +506,9 @@ const Router: React.FC = function () {
                   value={lightRot.x}
                   onChange={(evt) => {
                     lightRot.x = Number.parseFloat(evt.target.value);
-                    app.getLight().setRotation(lightRot);
+                    const light = app.getLight();
+                    light.setRotation(lightRot);
+                    light.delete();
                     set_lightRot(lightRot);
                   }}
                   className="w-full p-2 border shadow-inner focus:shadow-lg"
@@ -497,7 +523,9 @@ const Router: React.FC = function () {
                   value={lightRot.y}
                   onChange={(evt) => {
                     lightRot.y = Number.parseFloat(evt.target.value);
-                    app.getLight().setRotation(lightRot);
+                    const light = app.getLight();
+                    light.setRotation(lightRot);
+                    light.delete();
                     set_lightRot(lightRot);
                   }}
                   className="w-full p-2 border shadow-inner focus:shadow-lg"
@@ -512,7 +540,9 @@ const Router: React.FC = function () {
                   value={lightRot.z}
                   onChange={(evt) => {
                     lightRot.z = Number.parseFloat(evt.target.value);
-                    app.getLight().setRotation(lightRot);
+                    const light = app.getLight();
+                    light.setRotation(lightRot);
+                    !light.isDeleted() && light.delete();
                     set_lightRot(lightRot);
                   }}
                   className="w-full p-2 border shadow-inner focus:shadow-lg"

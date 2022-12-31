@@ -23,7 +23,7 @@ public:
      * @param width width of image in pixels
      * @param height height of image in pixels
      */
-    Texture( const Array<u8>& pixels, int width, int height, PixelType pixelType );
+    Texture( const Vector<u8>& pixels, int width, int height, PixelType pixelType );
     ~Texture();
 
     // static Ptr<Texture> LoadFromURL( const std::string& url );
@@ -37,6 +37,8 @@ public:
      * @throws std::runtime_error if the image decoding failed
      */
     static Ptr<Texture> LoadFromMemory( const u8* data, u64 size );
+
+    static Ptr<Texture> LoadFromFile (const string& filepath);
 
     /**
      * @brief Update texture in WebGL
@@ -65,10 +67,10 @@ public:
     void Bind();
 
 private:
-    u32       m_textureId = 0;
-    int       m_width = 0, m_height = 0;
-    int       m_format = 0;
-    Array<u8> m_pixelBuffer;
+    u32        m_textureId = 0;
+    int        m_width = 0, m_height = 0;
+    int        m_format = 0;
+    Vector<u8> m_pixelBuffer;
 };
 
 #endif

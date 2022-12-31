@@ -1,5 +1,6 @@
 #include <emscripten/html5.h>
 #include <webgl/webgl1.h>
+#include <emscripten/bind.h>
 #include <glm/ext.hpp>
 #include <fstream>
 #include <exception>
@@ -239,4 +240,13 @@ void Shader::Load( const char* vertexCode, const char* fragCode )
     glDeleteShader( fragmentShaderId );
 
     m_shaderID = shaderProgramId;
+}
+
+EMSCRIPTEN_BINDINGS( Shader_HPP )
+{
+    emscripten::class_<Shader>( "Shader" )
+        .function( "setInt", &Shader::SetInt )
+        .function( "setFloat", &Shader::SetFloat );
+    // .function( "setVector2", &Shader::SetVector );
+    // .function("setVector3", &Shader::SetVector);
 }

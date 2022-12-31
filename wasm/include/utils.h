@@ -1,4 +1,8 @@
+#ifndef UTILS_H
+#define UTILS_H
+
 #include <vector>
+#include <array>
 #include <map>
 #include <string>
 #include <sstream>
@@ -17,9 +21,12 @@ using f32 = float;
 
 using std::string;
 
-template <typename T> using Array = std::vector<T>;
+template <typename T> using Vector             = std::vector<T>;
+template <typename T, size_t size> using Array = std::array<T, size>;
 
 template <typename T> using Ptr  = std::shared_ptr<T>;
 template <typename T> using UPtr = std::unique_ptr<T>;
 
 using JSObject = emscripten::val;
+
+#endif

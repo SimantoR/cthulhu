@@ -14,7 +14,7 @@ class ISystem;
 class RenderPipeline
 {
 public:
-    RenderPipeline( const Array<Ptr<ISystem>>& systems );
+    RenderPipeline( const std::vector<Ptr<ISystem>>& systems );
 
     void Run( entt::registry* entities );
 

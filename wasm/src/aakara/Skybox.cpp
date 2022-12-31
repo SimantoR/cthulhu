@@ -25,7 +25,7 @@ Skybox::Skybox()
 Skybox::Skybox( const string left, const string front, const string top, const string bottom,
     const string right, const string back )
 {
-    Array<float> skyboxVertices = {
+    std::vector<float> skyboxVertices = {
         // positions
         -1.0f, +1.0f, -1.0f, //
         -1.0f, -1.0f, -1.0f, //

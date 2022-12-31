@@ -2,6 +2,7 @@
 #include <aakara/Shader.hpp>
 #include <aakara/fetch.hpp>
 #include <sstream>
+#include <tuple>
 #include <webgl/webgl1.h>
 #include <emscripten/fetch.h>
 #include <assimp/Importer.hpp>
@@ -9,18 +10,22 @@
 #include <assimp/scene.h>
 #include <glm/vec3.hpp>
 
-void updateNormals( Array<glm::vec3>& pos, Array<glm::vec3>& norms, Array<u16> indices );
+void  updateNormals( std::vector<glm::vec3>& pos, std::vector<glm::vec3>& norms, std::vector<u16> indices );
+float computeEdgeCollapseCost( Ptr<Vertex> u, Ptr<Vertex> v );
+void  computeEdgeCostAtVertex( Ptr<Vertex> v );
+void  collapse( Ptr<Vertex> u, Ptr<Vertex> v );
 
 Mesh::Mesh()
-    : Positions()
+    : Vertices()
     , Normals()
     , Indices()
     , UVMap()
 {
 }
 
-Mesh::Mesh( Array<glm::vec3>& pos, Array<glm::vec3>& norm, Array<u16>& indices, Array<glm::vec2>& uvmap )
-    : Positions( pos )
+Mesh::Mesh( std::vector<glm::vec3>& pos, std::vector<glm::vec3>& norm, std::vector<u16>& indices,
+    std::vector<glm::vec2>& uvmap )
+    : Vertices( pos )
     , Normals( norm )
     , Indices( indices )
     , UVMap( uvmap )
@@ -120,15 +125,15 @@ Ptr<Mesh> Mesh::LoadFromMemory( const char* data, u32 size )
     return std::make_shared<Mesh>( positions, normals, indices, uvmap );
 }
 
-Ptr<Mesh> Mesh::Create( Shader* shader, const Array<glm::vec3>& pos, const Array<glm::vec3>& norm,
-    const Array<u16> indices, const Array<glm::vec2>& uvmap )
+Ptr<Mesh> Mesh::Create( Shader* shader, const std::vector<glm::vec3>& pos, const std::vector<glm::vec3>& norm,
+    const std::vector<u16> indices, const std::vector<glm::vec2>& uvmap )
 {
     if ( !pos.size() || !norm.size() || !indices.size() )
         throw std::runtime_error( "Mesh is invalid" );
 
     Ptr<Mesh> mesh = std::make_shared<Mesh>();
 
-    mesh->Positions = pos;
+    mesh->Vertices = pos;
     mesh->Normals   = norm;
     mesh->Indices   = indices;
     mesh->UVMap     = uvmap;
@@ -222,14 +227,14 @@ bool Mesh::update( Shader* shader )
     std::vector<float> normalBuffer;
     std::vector<float> uvBuffer;
 
-    if ( Positions.size() == 0 || Normals.size() == 0 || UVMap.size() == 0 )
+    if ( Vertices.size() == 0 || Normals.size() == 0 || UVMap.size() == 0 )
         return false;
 
-    for ( u32 i = 0; i < Positions.size(); i++ )
+    for ( u32 i = 0; i < Vertices.size(); i++ )
     {
-        vertexBuffer.push_back( Positions[i].x );
-        vertexBuffer.push_back( Positions[i].y );
-        vertexBuffer.push_back( Positions[i].z );
+        vertexBuffer.push_back( Vertices[i].x );
+        vertexBuffer.push_back( Vertices[i].y );
+        vertexBuffer.push_back( Vertices[i].z );
 
         normalBuffer.push_back( Normals[i].x );
         normalBuffer.push_back( Normals[i].y );
@@ -283,6 +288,118 @@ bool Mesh::update( Shader* shader )
     return true;
 }
 
+// TODO: Compress mess to reduce polycount
+// LINK: https://sites.stat.washington.edu/wxs/Siggraph-93/siggraph93.pdf
+void Mesh::Optimize( f32 ratio )
+{
+    ratio = std::clamp( ratio, 0.0f, 1.0f );
+
+    u32               deletedTris = 0;
+    std::vector<bool> deleted0( 20 );
+    std::vector<bool> deleted1( 20 );
+
+    u32               triangleCount  = Indices.size() / 3;
+    u32               startTrisCount = triangleCount;
+    std::vector<bool> dirtyTriangles( triangleCount, false );
+    u32               targetTrisCount = std::round( triangleCount * ratio );
+
+    auto removeVertexPass
+        = [this, &dirtyTriangles]( u32 startTrisCount, u32 targetTrisCount, double threshold,
+              const std::vector<bool>& deleted0, const std::vector<bool>&, u32& )
+    {
+        glm::vec3 p, bycentricCoord;
+        u32       triangleCount = this->Indices.size() / 3;
+
+        // TODO: Implement RemoveVertexPass
+    };
+
+    for ( u32 iteration = 0; iteration < 10000; iteration++ )
+    {
+        if ( ( startTrisCount - deletedTris ) <= targetTrisCount )
+            break;
+
+        // Update mesh once in a while
+        if ( ( iteration % 5 ) == 0 )
+        {
+            // TODO: Update mesh
+        }
+
+        for ( u32 i = 0; i < triangleCount; i++ )
+            dirtyTriangles[i] = true;
+
+        // 0.75f is aggressiveness
+        f32    aggressiveness = 0.75f;
+        double threshold      = 0.00000001 * std::pow( iteration + 3, aggressiveness );
+
+        removeVertexPass( startTrisCount, targetTrisCount, threshold, deleted0, deleted1, deletedTris );
+    }
+}
+
+// NOTE: Computes tangent to be used in mesh optimization
+void Mesh::computeTangent()
+{
+    if ( UVMap.size() == 0 )
+        throw std::runtime_error( "UV map is required to compute tangent" );
+
+    u32                    vertexCount = this->Vertices.size();
+    std::vector<glm::vec3> tanA( vertexCount, glm::vec3( 0, 0, 0 ) );
+    std::vector<glm::vec3> tanB( vertexCount, glm::vec3( 0, 0, 0 ) );
+
+    u32 indexCount    = this->Indices.size();
+    u32 triangleCount = indexCount / 3;
+
+    for ( u32 i = 0; i < indexCount; i += 3 )
+    {
+        const glm::vec3& v0 = Vertices[Indices[i + 0]];
+        const glm::vec3& v1 = Vertices[Indices[i + 1]];
+        const glm::vec3& v2 = Vertices[Indices[i + 2]];
+
+        const glm::vec2& tex0 = UVMap[Indices[i + 0]];
+        const glm::vec2& tex1 = UVMap[Indices[i + 1]];
+        const glm::vec2& tex2 = UVMap[Indices[i + 2]];
+
+        glm::vec3 edge1 = v1 - v0;
+        glm::vec3 edge2 = v2 - v0;
+
+        glm::vec2 uv1 = tex1 - tex0;
+        glm::vec2 uv2 = tex2 - tex0;
+
+        float r = 1.0f / ( uv1.x * uv2.y - uv1.y * uv2.x );
+
+        glm::vec3 tangent( //
+            ( ( edge1.x * uv2.y ) - ( edge2.x * uv1.y ) ) * r,
+            ( ( edge1.y * uv2.y ) - ( edge2.y * uv1.y ) ) * r,
+            ( ( edge1.z * uv2.y ) - ( edge2.z * uv1.y ) ) * r );
+
+        glm::vec3 bitangent( //
+            ( ( edge1.x * uv2.x ) - ( edge2.x * uv1.x ) ) * r,
+            ( ( edge1.y * uv2.x ) - ( edge2.y * uv1.x ) ) * r,
+            ( ( edge1.z * uv2.x ) - ( edge2.z * uv1.x ) ) * r );
+
+        tanA[i + 0] += tangent;
+        tanA[i + 1] += tangent;
+        tanA[i + 2] += tangent;
+
+        tanB[i + 0] += bitangent;
+        tanB[i + 1] += bitangent;
+        tanB[i + 2] += bitangent;
+
+        for ( u32 i = 0; i < vertexCount; i++ )
+        {
+            glm::vec3 n  = Normals[i];
+            glm::vec3 t0 = tanA[i];
+            glm::vec3 t1 = tanB[i];
+
+            glm::vec3 t = t0 - ( n * dot( n, t0 ) );
+            t           = glm::normalize( t );
+
+            glm::vec3 c = glm::cross( n, t0 );
+            float     w = ( glm::dot( c, t1 ) < 0 ) ? -1.0f : 1.0f;
+            Tangents[i] = glm::vec4( t.x, t.y, t.z, w );
+        }
+    }
+}
+
 void updateNormals( std::vector<glm::vec3>& pos, std::vector<glm::vec3>& norms, std::vector<u32> indices )
 {
     if ( norms.size() > 0 )
@@ -320,10 +437,4 @@ void updateNormals( std::vector<glm::vec3>& pos, std::vector<glm::vec3>& norms, 
 
         norms.emplace_back( U.y * V.z - U.z * V.y, U.z * V.x - U.x * V.z, U.x * V.y - U.y * V.x );
     }
-}
-
-// TODO: Compress mess to reduce polycount
-// LINK: https://sites.stat.washington.edu/wxs/Siggraph-93/siggraph93.pdf
-void Mesh::Optimize( f32 ratio )
-{
 }

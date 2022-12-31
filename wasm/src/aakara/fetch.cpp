@@ -14,7 +14,7 @@ struct Header
 
 struct FetchOptions
 {
-    Array<Header>                              headers;
+    std::vector<Header>                              headers;
     std::function<void( emscripten_fetch_t* )> callback;
 };
 
@@ -34,6 +34,16 @@ namespace HTTP
 
         // emscripten_console_log( "Starting fetch..." );
         emscripten_fetch( &attr, url.c_str() );
+    }
+
+    void POST( const std::string& url, FetchOptions options )
+    {
+        emscripten_fetch_attr_t attr;
+        emscripten_fetch_attr_init( &attr );
+        std::strcpy(attr.requestMethod, "POST");
+        
+        // attach request headers
+        
     }
 }
 

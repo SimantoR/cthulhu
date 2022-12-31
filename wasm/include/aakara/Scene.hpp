@@ -1,44 +1,31 @@
 #ifndef SCENE_HPP
 #define SCENE_HPP
 
-#include "SceneObject.hpp"
-#include "Camera.hpp"
-#include "Mesh.hpp"
-#include "Texture.hpp"
-
+#include <iostream>
 #include <utils.h>
+#include <entt/entt.hpp>
 #include <entt/entity/registry.hpp>
+#include <map>
 
-struct Node
-{
-    string id;
-    Node*  parent = nullptr;
-
-    Node()
-    {
-    }
-
-    Node( string id, Node* parent )
-    {
-        this->id     = id;
-        this->parent = parent;
-    }
-};
+class Camera;
+class Mesh;
 
 class Scene
 {
 public:
     Scene();
-    static Ptr<Scene> LoadScene( std::string filepath );
+    ~Scene();
 
-    void removeNode( Node* node );
+    /**
+     * @brief Load a scene from file.
+     *
+     * @param filepath Path to file in filesystem.
+     */
+    static void Load( const string& filepath );
 
 private:
-    Ptr<SceneObject>    m_rootNode = nullptr;
-    Array<Ptr<Camera>>  m_cameras;
-    Array<Ptr<Mesh>>    m_meshes;
-    Array<Ptr<Texture>> m_textures;
-    entt::registry      m_registry;
+    entt::registry         m_entityRegistery;
+    std::map<string, Mesh> m_meshRegistry;
 };
 
 #endif

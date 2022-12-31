@@ -7,12 +7,19 @@ interface Vec3 extends Vec2 {
   z: number;
 }
 
+class WASMClass {
+  delete(): void;
+  isDeleted(): boolean;
+}
+
 module Aakara {
-  module FS {
-    load();
+  namespace FS {
+    function open(path: string, flags: any, mode: any): Promise<any>;
+    function readFile(path: string, opts: any = {}): Promise<any>;
+    function readdir(path: string): Promise<any>;
   }
 
-  class Transform {
+  class Transform extends WASMClass {
     position: Vec3;
     rotation: Vec3;
     scale: Vec3;
@@ -24,7 +31,18 @@ module Aakara {
     translate(delta: Vec3): void;
   }
 
-  class Light {
+  interface Shader {
+    setInt(loc: string, value: number): void;
+    setFloat(loc: string, value: number): void;
+    setVector2(loc: string, value: Vec2): void;
+    setVector3(loc: string, value: Vec3): void;
+  }
+
+  interface Material {
+    update(shader: Shader): void;
+  }
+
+  class Light extends WASMClass {
     getStrength(): number;
     setStrength(v: number);
     getColor(): Vec3;
@@ -34,13 +52,13 @@ module Aakara {
     setRotation(r: Vec3);
   }
 
-  class Camera {
-    transform: Transform;
+  class Camera extends WASMClass {
+    getTransform(): Transform;
     getViewport(): Vec2;
     setViewport(xy: Vec2): void;
   }
 
-  class OrbitCameraControl {
+  class OrbitCameraControl extends WASMClass {
     public focus: Vec3;
     public distance: number;
 
@@ -50,16 +68,16 @@ module Aakara {
     setCamera(cam: Camera);
   }
 
-  class Part {
+  class Part extends WASMClass {
     getId(): string;
     getTransform(): Transform;
   }
 
-  class Renderer {
+  class Renderer extends WASMClass {
     setColor(r: number, g: number, b: number);
   }
 
-  class App {
+  class App extends WASMClass {
     constructor(id: string, width: number, height: number);
     getRenderer(): Renderer;
     getCamera(): Camera;

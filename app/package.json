@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "webpack server",
     "start": "node ./serve.js",
-    "build": "webpack -p"
+    "build": "webpack build"
   },
   "author": "Simanto Rahman",
   "license": "GPL-3.0-or-later",

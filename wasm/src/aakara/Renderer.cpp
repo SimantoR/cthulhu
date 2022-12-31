@@ -63,7 +63,7 @@ Renderer::Renderer( const std::string& id, int width, int height )
 
     try
     {
-        m_skybox = new Skybox();
+        m_skybox = std::make_unique<Skybox>();
     }
     catch ( const std::exception& err )
     {
@@ -172,4 +172,9 @@ EMSCRIPTEN_BINDINGS( RENDERER_H )
     emscripten::class_<Renderer>( "Renderer" )
         .smart_ptr_constructor( "Renderer", &std::make_shared<Renderer, string, int, int> )
         .function( "setColor", &Renderer::setColor );
+
+    emscripten::value_object<RenderCmd>( "RenderCmd" )
+        .field( "mesh", &RenderCmd::mesh )
+        .field( "transform", &RenderCmd::transform )
+        .field( "texture", &RenderCmd::texture );
 }

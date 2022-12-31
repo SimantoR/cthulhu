@@ -1,14 +1,15 @@
 #define STB_IMAGE_IMPLEMENTATION
 
 #include <exception>
+#include <fstream>
+
 #include <emscripten/fetch.h>
 #include <webgl/webgl1.h>
-
 #include <aakara/Texture.hpp>
 #include <aakara/fetch.hpp>
 #include <stbi_image.h>
 
-Texture::Texture( const std::vector<u8>& pixels, int width, int height, PixelType pixelType )
+Texture::Texture( const Vector<u8>& pixels, int width, int height, PixelType pixelType )
     : m_pixelBuffer( pixels )
     , m_width( width )
     , m_height( height )
@@ -98,6 +99,17 @@ Ptr<Texture> Texture::LoadFromMemory( const u8* data, u64 size )
     texture->m_format    = channel;
 
     return texture;
+}
+
+Ptr<Texture> Texture::LoadFromFile( const string& filepath )
+{
+    std::ifstream in_stream( filepath );
+    u64           file_size = in_stream.tellg();
+
+    u8 buffer[file_size];
+    in_stream.read( reinterpret_cast<char*>( buffer ), file_size );
+
+    return LoadFromMemory( buffer, file_size );
 }
 
 Texture::PixelType Texture::GetFormat()

@@ -7,3 +7,6 @@
 [submodule "./wasm/vendors/glm-0.9.9.8"]
 	path = ./wasm/vendors/glm-0.9.9.8
 	url = https://github.com/g-truc/glm.git
+[submodule "wasm/.\\vendors\\zstr"]
+	path = wasm/.\\vendors\\zstr
+	url = https://github.com/mateidavid/zstr.git

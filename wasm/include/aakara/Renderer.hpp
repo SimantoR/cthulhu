@@ -21,9 +21,13 @@ class Transform;
  */
 struct RenderCmd
 {
-    Ptr<Mesh>      mesh;
-    Ptr<Transform> transform;
-    Ptr<Texture>   texture;
+    Ptr<Mesh>      mesh      = nullptr;
+    Ptr<Transform> transform = nullptr;
+    Ptr<Texture>   texture   = nullptr;
+
+    RenderCmd()
+    {
+    }
 
     RenderCmd( Ptr<Mesh> mesh, Ptr<Texture> texture, Ptr<Transform> transform )
         : mesh( mesh )
@@ -77,8 +81,8 @@ private:
 
     glm::vec<3, f32, glm::packed_lowp> m_color;
 
-    Ptr<Shader> m_shader = nullptr;
-    Skybox*     m_skybox = nullptr;
+    Ptr<Shader>  m_shader = nullptr;
+    UPtr<Skybox> m_skybox = nullptr;
 };
 
 #endif

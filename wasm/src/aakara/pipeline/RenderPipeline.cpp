@@ -4,7 +4,7 @@
 
 #include <entt/entt.hpp>
 
-RenderPipeline::RenderPipeline( const Array<Ptr<ISystem>>& systems )
+RenderPipeline::RenderPipeline( const std::vector<Ptr<ISystem>>& systems )
     : m_systems( systems )
 {
 }
